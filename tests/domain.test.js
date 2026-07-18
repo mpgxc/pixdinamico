@@ -35,12 +35,27 @@ test('sanitize remove acentos/especiais, força maiúsculas e limita tamanho', (
   assert.equal(sanitize('abcdefghij', 5), 'ABCDE');
 });
 
-test('parseAmount interpreta o formato brasileiro e rejeita inválidos', () => {
+test('parseAmount aceita o formato brasileiro (vírgula decimal)', () => {
   assert.equal(parseAmount('1.234,56'), 1234.56);
   assert.equal(parseAmount('10,00'), 10);
+  assert.equal(parseAmount('0,50'), 0.5);
+  assert.equal(parseAmount('1.234'), 1234); // ponto = separador de milhar
+  assert.equal(parseAmount('1.234.567,89'), 1234567.89);
+  assert.equal(parseAmount('R$ 10,50'), 10.5); // ignora símbolo/espaço
+});
+
+test('parseAmount aceita o formato internacional (ponto decimal)', () => {
+  assert.equal(parseAmount('1234.56'), 1234.56);
+  assert.equal(parseAmount('10.5'), 10.5);
+  assert.equal(parseAmount('10'), 10);
+  assert.equal(parseAmount('1,234.56'), 1234.56); // vírgula = separador de milhar
+});
+
+test('parseAmount rejeita entradas inválidas ou não positivas', () => {
   assert.equal(parseAmount(''), null);
   assert.equal(parseAmount('abc'), null);
   assert.equal(parseAmount('0'), null);
+  assert.equal(parseAmount('0,00'), null);
 });
 
 test('formatBRL usa vírgula decimal e prefixo R$', () => {
