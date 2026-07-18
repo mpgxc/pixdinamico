@@ -1,0 +1,12 @@
+{
+  "name": "pixdinamico",
+  "version": "1.0.0",
+  "description": "Gerador de QR Code PIX (BR Code estático), 100% client-side e sem build.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": ["pix", "qrcode", "brcode", "emv"],
+  "license": "MIT"
+}
