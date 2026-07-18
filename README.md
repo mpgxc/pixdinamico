@@ -72,9 +72,14 @@ refatoração, garantindo que o BR Code gerado permanece idêntico.
 
 ## Deploy (GitHub Pages)
 
-O site é servido a partir da raiz (`index.html`). Em **Settings → Pages**,
-selecione a branch `main` e a pasta `/ (root)`. Como o GitHub Pages serve por
-HTTP, os módulos ES carregam normalmente.
+O deploy é automatizado por GitHub Actions
+(`.github/workflows/deploy-pages.yml`): a cada push na `main`, o workflow roda
+os testes e, **só se eles passarem**, publica o site no GitHub Pages. Como o
+Pages serve por HTTP, os módulos ES carregam normalmente.
+
+Configuração única (uma vez): em **Settings → Pages**, defina
+**Source = "GitHub Actions"** (no lugar de "Deploy from a branch"). A partir
+daí, todo push na `main` publica automaticamente.
 
 ## Observação técnica
 
