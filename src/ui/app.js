@@ -8,7 +8,6 @@ import { buildPixPayload } from '../domain/pix.js';
 import { formatBRL } from '../domain/money.js';
 import { createQrImage, QrLibraryUnavailableError } from '../qr/qr-renderer.js';
 import { readForm, validate } from './form.js';
-import { initScanner } from './scanner.js';
 
 const COPY_FEEDBACK_MS = 1500;
 const LABEL_COPY = 'Copiar';
@@ -140,5 +139,4 @@ export function init() {
   bindFreeValueToggle(elements);
   bindFormSubmit(elements);
   bindCopyButton(elements);
-  initScanner();
 }

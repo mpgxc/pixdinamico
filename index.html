@@ -3,113 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gerador de QR Code PIX</title>
+  <title>QR Code PIX — gerar ou ler</title>
   <link rel="stylesheet" href="assets/styles.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" defer></script>
-  <script type="module" src="src/main.js"></script>
 </head>
 <body>
-  <main class="shell">
-    <section class="form-side">
+  <main class="home">
+    <header class="home-head">
       <div class="eyebrow">Pagamento instantâneo</div>
-      <h1>Gerador de<br>QR Code <span class="accent">PIX</span></h1>
+      <h1>QR Code <span class="accent">PIX</span></h1>
+      <p class="home-lead">
+        Monte uma cobrança ou leia um código já existente. Tudo acontece no
+        navegador — nenhum dado sai do dispositivo.
+      </p>
+    </header>
 
-      <form id="pix-form" novalidate>
-        <div class="field">
-          <label for="chave">Chave PIX <span class="hint">— CPF, CNPJ, e-mail, telefone ou aleatória</span></label>
-          <input id="chave" type="text" placeholder="fulano@email.com" autocomplete="off">
-        </div>
+    <nav class="home-grid">
+      <a class="home-card" href="gerar.html">
+        <span class="home-glyph" aria-hidden="true">▚</span>
+        <h2>Gerar QR Code</h2>
+        <p>
+          Monte o BR Code a partir da sua chave PIX, com valor fixo ou livre,
+          copie o código e baixe a imagem.
+        </p>
+        <span class="home-cta">Gerar</span>
+      </a>
 
-        <div class="field">
-          <label for="nome">Nome do recebedor <span class="hint">— máx. 25</span></label>
-          <input id="nome" type="text" placeholder="Fulano de Tal" maxlength="25" autocomplete="off">
-        </div>
+      <a class="home-card" href="ler.html">
+        <span class="home-glyph" aria-hidden="true">◨</span>
+        <h2>Ler QR Code</h2>
+        <p>
+          Aponte a câmera. O leitor localiza o código no quadro, recorta em
+          resolução cheia, amplia e decodifica.
+        </p>
+        <span class="home-cta">Abrir leitor</span>
+      </a>
+    </nav>
 
-        <div class="row">
-          <div class="field">
-            <label for="cidade">Cidade <span class="hint">— máx. 15</span></label>
-            <input id="cidade" type="text" placeholder="Teresina" maxlength="15" autocomplete="off">
-          </div>
-          <div class="field">
-            <label for="valor">Valor</label>
-            <div class="amount-wrap">
-              <input id="valor" type="text" inputmode="decimal" placeholder="0,00" autocomplete="off">
-            </div>
-          </div>
-        </div>
-
-        <label class="free-value">
-          <input id="livre" type="checkbox">
-          Valor livre (pagador digita no app)
-        </label>
-
-        <div class="field" style="margin-top:18px;">
-          <label for="txid">Identificador <span class="hint">— txid, opcional</span></label>
-          <input id="txid" type="text" placeholder="PEDIDO12345" maxlength="25" autocomplete="off">
-        </div>
-
-        <button class="generate" type="submit">Gerar QR Code</button>
-        <div class="err-msg" id="err" role="alert" aria-live="polite"></div>
-      </form>
-    </section>
-
-    <section class="qr-side">
-      <div class="qr-frame" id="frame">
-        <div class="qr-placeholder" id="placeholder">
-          <span class="glyph">▚</span>
-          Preencha os dados<br>e gere o código
-        </div>
-      </div>
-
-      <div class="pix-badge"><span class="dot"></span> br.gov.bcb.pix</div>
-      <div class="payout-line" id="payout" aria-live="polite"></div>
-
-      <a class="download-link" id="download" download="qrcode-pix.gif">↓ Baixar imagem</a>
-
-      <div class="copy-box" id="copyBox">
-        <div class="copy-field">
-          <input id="brcode" type="text" readonly aria-label="Código PIX copia-e-cola">
-          <button id="copyBtn" type="button">Copiar</button>
-        </div>
-      </div>
-
-      <button class="scan-open" id="scanOpen" type="button">
-        <span aria-hidden="true">▣</span> Ler um QR Code
-      </button>
-    </section>
+    <p class="home-foot"><span class="dot"></span> br.gov.bcb.pix · BR Code estático</p>
   </main>
-
-  <div class="scanner" id="scanner" hidden aria-hidden="true">
-    <div class="scanner-card" role="dialog" aria-modal="true" aria-labelledby="scannerTitle">
-      <header class="scanner-head">
-        <h2 id="scannerTitle">Leitor de QR Code</h2>
-        <button class="scanner-close" id="scanClose" type="button" aria-label="Fechar leitor">×</button>
-      </header>
-
-      <div class="scanner-stage" id="scanStage">
-        <video id="scanVideo" playsinline muted autoplay></video>
-        <canvas class="scanner-overlay" id="scanOverlay" aria-hidden="true"></canvas>
-      </div>
-
-      <div class="scanner-bar">
-        <p class="scanner-status" id="scanStatus" role="status" aria-live="polite">Ligando a câmera…</p>
-        <button class="scanner-torch" id="scanTorch" type="button" aria-pressed="false" hidden>Lanterna</button>
-      </div>
-
-      <div class="scanner-result" id="scanResult" hidden>
-        <label for="scanText">Conteúdo lido</label>
-        <div class="copy-field">
-          <input id="scanText" type="text" readonly>
-          <button id="scanCopy" type="button">Copiar</button>
-        </div>
-        <button class="scanner-again" id="scanAgain" type="button">Ler outro</button>
-      </div>
-
-      <figure class="scanner-crop" id="scanCropBox" hidden>
-        <canvas id="scanCrop"></canvas>
-        <figcaption>Recorte ampliado enviado ao decodificador</figcaption>
-      </figure>
-    </div>
-  </div>
 </body>
 </html>
