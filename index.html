@@ -72,7 +72,44 @@
           <button id="copyBtn" type="button">Copiar</button>
         </div>
       </div>
+
+      <button class="scan-open" id="scanOpen" type="button">
+        <span aria-hidden="true">▣</span> Ler um QR Code
+      </button>
     </section>
   </main>
+
+  <div class="scanner" id="scanner" hidden aria-hidden="true">
+    <div class="scanner-card" role="dialog" aria-modal="true" aria-labelledby="scannerTitle">
+      <header class="scanner-head">
+        <h2 id="scannerTitle">Leitor de QR Code</h2>
+        <button class="scanner-close" id="scanClose" type="button" aria-label="Fechar leitor">×</button>
+      </header>
+
+      <div class="scanner-stage" id="scanStage">
+        <video id="scanVideo" playsinline muted autoplay></video>
+        <canvas class="scanner-overlay" id="scanOverlay" aria-hidden="true"></canvas>
+      </div>
+
+      <div class="scanner-bar">
+        <p class="scanner-status" id="scanStatus" role="status" aria-live="polite">Ligando a câmera…</p>
+        <button class="scanner-torch" id="scanTorch" type="button" aria-pressed="false" hidden>Lanterna</button>
+      </div>
+
+      <div class="scanner-result" id="scanResult" hidden>
+        <label for="scanText">Conteúdo lido</label>
+        <div class="copy-field">
+          <input id="scanText" type="text" readonly>
+          <button id="scanCopy" type="button">Copiar</button>
+        </div>
+        <button class="scanner-again" id="scanAgain" type="button">Ler outro</button>
+      </div>
+
+      <figure class="scanner-crop" id="scanCropBox" hidden>
+        <canvas id="scanCrop"></canvas>
+        <figcaption>Recorte ampliado enviado ao decodificador</figcaption>
+      </figure>
+    </div>
+  </div>
 </body>
 </html>
