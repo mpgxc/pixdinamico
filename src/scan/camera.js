@@ -144,6 +144,49 @@ export function supportsTorch(track) {
 }
 
 /**
+ * Faixa de zoom aceita pela trilha, ou `null` quando a câmera não tem zoom
+ * controlável — o que inclui todo o Safari do iOS e a maioria das webcams de
+ * notebook. É por isso que a aproximação automática é sempre um bônus, nunca
+ * um pré-requisito da leitura.
+ *
+ * @param {MediaStreamTrack} track
+ * @returns {import('./zoom.js').ZoomRange|null}
+ */
+export function zoomCapability(track) {
+  const { zoom } = track?.getCapabilities?.() ?? {};
+  if (!zoom || !(zoom.max > zoom.min)) return null;
+
+  return { min: zoom.min, max: zoom.max, step: zoom.step ?? 0 };
+}
+
+/**
+ * Nível de zoom em que a câmera já está (nem sempre é o mínimo: o navegador
+ * pode restaurar o valor de uma sessão anterior).
+ *
+ * @param {MediaStreamTrack} track
+ * @returns {number|null}
+ */
+export function currentZoom(track) {
+  return track?.getSettings?.().zoom ?? null;
+}
+
+/**
+ * Aplica um nível de zoom.
+ *
+ * @param {MediaStreamTrack} track
+ * @param {number} value
+ * @returns {Promise<boolean>} `true` se a câmera aceitou.
+ */
+export async function applyZoom(track, value) {
+  try {
+    await track.applyConstraints({ advanced: [{ zoom: value }] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Liga ou desliga a lanterna.
  *
  * @param {MediaStreamTrack} track

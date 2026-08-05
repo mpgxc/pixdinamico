@@ -11,14 +11,18 @@
  */
 
 import {
+  applyZoom,
   CameraError,
+  currentZoom,
   openCamera,
   setTorch,
   startFrameLoop,
   stopStream,
   supportsTorch,
+  zoomCapability,
 } from '../scan/camera.js';
 import { createQrPipeline } from '../scan/pipeline.js';
+import { createZoomController } from '../scan/zoom.js';
 
 /** Intervalo mínimo entre análises: ~8 leituras por segundo. */
 const SCAN_INTERVAL_MS = 120;
@@ -61,7 +65,7 @@ export function initScanner() {
   if (!elements) return; // página sem o leitor
 
   const pipeline = createQrPipeline();
-  const session = { stream: null, track: null, stopLoop: null };
+  const session = { stream: null, track: null, stopLoop: null, zoom: null };
 
   bindEvents(elements, pipeline, session);
 }
@@ -82,6 +86,7 @@ function queryElements() {
     placeholderText: byId('scanPlaceholderText'),
     status: byId('scanStatus'),
     torchButton: byId('scanTorch'),
+    zoomBadge: byId('scanZoom'),
     result: byId('scanResult'),
     text: byId('scanText'),
     copyButton: byId('scanCopy'),
@@ -134,6 +139,13 @@ async function start(elements, pipeline, session) {
 
   elements.torchButton.hidden = !supportsTorch(session.track);
   elements.torchButton.setAttribute('aria-pressed', 'false');
+
+  session.zoom = createZoomController({
+    range: zoomCapability(session.track),
+    initial: currentZoom(session.track),
+    apply: (value) => applyZoom(session.track, value),
+  });
+  showZoom(elements, session.zoom);
   elements.toggleButton.disabled = false;
   elements.toggleButton.textContent = LABEL_STOP;
   setStatus(elements, STATUS.searching);
@@ -143,7 +155,12 @@ async function start(elements, pipeline, session) {
     async () => {
       const result = await pipeline.scan(elements.video);
       render(elements, result);
-      if (result.status === 'decoded') finish(elements, session, result);
+
+      if (result.status === 'decoded') {
+        finish(elements, session, result);
+        return;
+      }
+      await steerZoom(elements, pipeline, session, result);
     },
     {
       minIntervalMs: SCAN_INTERVAL_MS,
@@ -190,10 +207,43 @@ function releaseCamera(elements, session) {
   elements.video.srcObject = null;
   elements.stage.classList.remove('is-live');
   elements.torchButton.hidden = true;
+  elements.zoomBadge.hidden = true;
+  session.zoom = null;
 
   // Sem vídeo por baixo, o destaque da última detecção viraria um contorno
   // solto no vazio — e ainda por cima do texto da moldura.
   clearHighlight(elements.overlay);
+}
+
+/**
+ * Decide a aproximação automática a partir do que o pipeline viu no quadro.
+ *
+ * Localizou e não leu -> aproxima na medida exata. Não achou nada -> começa a
+ * reabrir o campo, para não deixar o usuário preso num enquadramento estreito.
+ *
+ * Depois de mexer no zoom, a localização anterior deixa de valer: o destaque na
+ * tela apontaria para onde o símbolo estava antes de a lente se mover. Por isso
+ * o pipeline é reiniciado, forçando uma medição nova no próximo quadro.
+ */
+async function steerZoom(elements, pipeline, session, result) {
+  const zoom = session.zoom;
+  if (!zoom?.supported) return;
+
+  const changed = result.symbol
+    ? await zoom.onLocated(result.symbol)
+    : result.status === 'searching' && (await zoom.onMissed());
+
+  if (!changed) return;
+
+  pipeline.reset();
+  showZoom(elements, zoom);
+}
+
+/** Mostra o nível de zoom só quando ele saiu do mínimo. */
+function showZoom(elements, zoom) {
+  const zoomed = zoom.supported && zoom.level > zoom.min;
+  elements.zoomBadge.hidden = !zoomed;
+  if (zoomed) elements.zoomBadge.textContent = `${zoom.level.toFixed(1).replace('.', ',')}×`;
 }
 
 /** Reflete o resultado de um quadro na tela (status, destaque e recorte). */

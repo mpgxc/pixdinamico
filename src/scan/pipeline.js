@@ -21,6 +21,12 @@
  *
  * O passo 3 é o que separa "não tem QR na cena" de "tem, mas não deu para ler",
  * e é essa distinção que faz valer o recorte: sem ela, ampliar seria chute.
+ *
+ * O passo 3 também é o que alimenta a aproximação automática (ver `zoom`): ao
+ * localizar sem conseguir ler, o pipeline devolve o tamanho do módulo em pixels
+ * do sensor, e é com esse número que se calcula de quanto aproximar. O recorte
+ * espalha os pixels que já existem; o zoom é o único passo que traz pixels
+ * novos, e por isso é a saída quando nem o recorte resolve.
  */
 
 import { binarize, binaryToLuma } from './binarize.js';
@@ -68,6 +74,13 @@ const CROP_SAFETY_MARGIN = 1.06;
 const LOCATE_INTERVAL_MS = 220;
 
 /**
+ * Fração da largura do quadro que o símbolo pode ocupar. Serve de teto para a
+ * aproximação automática: passar disso é perder o símbolo pelas bordas assim
+ * que a mão tremer.
+ */
+const MAX_FRAME_FILL = 0.8;
+
+/**
  * @typedef {Object} ScanResult
  * @property {'no-frame'|'searching'|'located'|'decoded'} status
  *   `searching`: nenhum QR na cena. `located`: símbolo encontrado, mas ainda
@@ -78,6 +91,10 @@ const LOCATE_INTERVAL_MS = 220;
  *   Cantos do símbolo em coordenadas do quadro reduzido, para destaque na tela.
  * @property {ImageData}   [crop]     Recorte ampliado que foi decodificado.
  * @property {{width: number, height: number}} [frame] Dimensões do quadro reduzido.
+ * @property {import('./zoom.js').SymbolMetrics} [symbol]
+ *   Tamanho do módulo e teto de ampliação, em pixels do vídeo original. Só vem
+ *   quando o símbolo foi localizado — é o que a aproximação automática usa para
+ *   calcular de quanto precisa aproximar, em vez de tatear.
  */
 
 /**
@@ -149,6 +166,8 @@ export function createQrPipeline() {
     );
     lastCorners = corners;
 
+    const symbol = symbolMetrics(video, quad, locatedWidth);
+
     // Passos 4 e 5: snapshot em resolução cheia, recorte, endireitamento e upscale.
     const snapshot = grabFrame(video, snapshotCanvas, Math.min(video.videoWidth, SNAPSHOT_MAX_WIDTH));
     const snapshotQuad = expandQuad(
@@ -183,7 +202,7 @@ export function createQrPipeline() {
           crop: cropImage,
           frame: frameSize,
         }
-      : { status: 'located', corners, crop: cropImage, frame: frameSize };
+      : { status: 'located', corners, crop: cropImage, frame: frameSize, symbol };
   }
 
   /**
@@ -224,6 +243,19 @@ function locateIn({ imageData, width, height }) {
 
 function cornersOf(quad) {
   return [quad.topLeft, quad.topRight, quad.bottomRight, quad.bottomLeft];
+}
+
+/**
+ * Traduz as medidas do símbolo para pixels do vídeo original — a unidade em que
+ * o zoom opera, já que aproximar multiplica igualmente tudo o que o sensor vê.
+ */
+function symbolMetrics(video, quad, locatedWidth) {
+  const toSource = video.videoWidth / locatedWidth;
+
+  return {
+    moduleSize: quad.moduleSize * toSource,
+    maxModuleSize: (MAX_FRAME_FILL * video.videoWidth) / quad.sampledModules,
+  };
 }
 
 /**

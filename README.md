@@ -52,7 +52,8 @@ src/
     quad.js             #   finder patterns -> quadrilátero do símbolo
     warp.js             #   recorte com correção de perspectiva + upscale
     decoder.js          #   adapter: BarcodeDetector nativo -> jsQR (fallback)
-    camera.js           #   getUserMedia, laço de quadros, lanterna
+    zoom.js             #   política de aproximação automática
+    camera.js           #   getUserMedia, laço de quadros, lanterna e zoom
     pipeline.js         #   orquestra localizar -> recortar -> ampliar -> decodificar
   ui/
     form.js             #   leitura e validação do formulário
@@ -63,6 +64,7 @@ src/
 tests/
   domain.test.js        # testes de regressão do domínio (node --test)
   scan.test.js          # testes do pipeline de leitura (símbolos sintéticos)
+  zoom.test.js          # testes da política de aproximação automática
 ```
 
 Princípios aplicados: separação de responsabilidades (domínio puro isolado do
@@ -104,8 +106,35 @@ custaria ~35ms por passagem *enquanto não há nada na cena*.
 Medido de ponta a ponta (Chromium com câmera falsa, QR de 49 módulos girado
 num quadro 1280x720): acima de ~8px por módulo a leitura sai direta do quadro;
 entre ~3 e ~6px por módulo ela só acontece pelo recorte ampliado; abaixo de
-~2,5px por módulo na imagem original o símbolo não é mais localizável e a saída
-correta é aproximar a câmera.
+~2,5px por módulo na imagem original o símbolo não é mais localizável.
+
+### Aproximação automática
+
+O recorte espalha os pixels que **já existem** — ele endireita e facilita a vida
+do decodificador, mas não inventa detalhe. Quando nem isso resolve, a única
+saída que traz informação nova é aproximar a lente, e é o que o leitor faz
+sozinho quando a câmera do aparelho permite (`zoom` em
+`MediaStreamTrack.getCapabilities()` — existe no Android, não no iOS).
+
+O gatilho é preciso, e não um "aproxima até dar certo": só aproxima quando o
+símbolo foi **localizado mas não decodificado**. Nesse instante o tamanho do
+módulo é conhecido, então o fator necessário é calculado em vez de tateado —
+módulo de 4px com alvo de 8px pede exatamente 2x. O ajuste vai em degraus (no
+máximo o dobro por vez), com espera entre eles, e o laço se corrige a cada nova
+medição.
+
+Duas salvaguardas evitam o modo de falha clássico dessa funcionalidade:
+
+- **Teto de enquadramento.** Um símbolo com muitos módulos só atingiria o alvo
+  de nitidez depois de transbordar as bordas — e aí o localizador o perde, o
+  campo reabre, ele reaparece, e o zoom oscila. O teto vem do próprio tamanho do
+  símbolo, não de um chute.
+- **Reabertura sozinha.** Aproximado e sem achar nada por um tempo, o campo
+  volta a abrir; caso contrário o usuário fica preso num enquadramento estreito
+  sem entender o motivo.
+
+Quando a câmera não tem zoom controlável, nada disso roda e a leitura segue
+igual — é sempre um bônus, nunca um pré-requisito.
 
 Dois detalhes que valem menção, porque são erros silenciosos fáceis de cometer:
 
@@ -165,6 +194,11 @@ visão computacional são funções puras sobre buffers, então os testes sintet
 um símbolo com finder patterns em posições conhecidas, rasterizam com a rotação
 desejada e conferem se a localização, a dimensão estimada e o recorte ampliado
 reproduzem exatamente o que foi desenhado.
+
+A aproximação automática recebe a câmera por injeção, então também é testada no
+Node: um relógio controlado e um `apply` falso cobrem a espera entre ajustes, a
+reabertura do campo e a recusa da câmera — casos que num aparelho real
+dependeriam de sorte para acontecer no momento certo.
 
 ## Deploy (GitHub Pages)
 
