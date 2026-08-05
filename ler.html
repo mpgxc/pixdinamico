@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leitor de QR Code PIX</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <script type="module" src="src/main-scanner.js"></script>
+</head>
+<body>
+  <main class="shell shell-single">
+    <section class="reader-side">
+      <a class="back-link" href="index.html">← Início</a>
+      <div class="eyebrow">Câmera ao vivo</div>
+      <h1>Leitor de<br>QR <span class="accent">Code</span></h1>
+
+      <div class="scanner-stage" id="scanStage">
+        <video id="scanVideo" playsinline muted autoplay></video>
+        <canvas class="scanner-overlay" id="scanOverlay" aria-hidden="true"></canvas>
+        <p class="scanner-placeholder" id="scanPlaceholder">
+          <span class="glyph" aria-hidden="true">◨</span>
+          <span id="scanPlaceholderText">A câmera só liga quando você pedir</span>
+        </p>
+      </div>
+
+      <div class="scanner-bar">
+        <p class="scanner-status" id="scanStatus" role="status" aria-live="polite">
+          Nada é enviado para fora do aparelho.
+        </p>
+        <button class="scanner-torch" id="scanTorch" type="button" aria-pressed="false" hidden>
+          Lanterna
+        </button>
+      </div>
+
+      <button class="generate" id="scanToggle" type="button">Ligar câmera</button>
+
+      <div class="scanner-result" id="scanResult" hidden>
+        <label for="scanText">Conteúdo lido</label>
+        <div class="copy-field">
+          <input id="scanText" type="text" readonly>
+          <button id="scanCopy" type="button">Copiar</button>
+        </div>
+      </div>
+
+      <figure class="scanner-crop" id="scanCropBox" hidden>
+        <canvas id="scanCrop"></canvas>
+        <figcaption>Recorte ampliado enviado ao decodificador</figcaption>
+      </figure>
+
+      <a class="cross-link" href="gerar.html">
+        <span aria-hidden="true">▚</span> Gerar um QR Code PIX
+      </a>
+    </section>
+  </main>
+</body>
+</html>

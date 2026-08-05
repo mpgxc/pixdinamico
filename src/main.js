@@ -1,5 +1,5 @@
 /**
- * Ponto de entrada da aplicação (carregado como `<script type="module">`).
+ * Ponto de entrada da página do gerador (`gerar.html`).
  *
  * Scripts de módulo são `defer` por padrão, então normalmente o DOM já está
  * pronto; ainda assim, tratamos o caso de o documento ainda estar carregando.

@@ -1,14 +1,17 @@
 /**
- * Controlador da interface do leitor de QR Code.
+ * Controlador da página do leitor de QR Code.
  *
- * Cuida só de DOM e de estado de tela: abrir/fechar o painel, ligar a câmera,
- * empurrar cada quadro para o pipeline e desenhar o retorno. Toda a visão
- * computacional fica em `src/scan/`, sem saber que existe uma interface.
+ * Cuida só de DOM e de estado de tela: ligar e desligar a câmera, empurrar cada
+ * quadro para o pipeline e desenhar o retorno. Toda a visão computacional fica
+ * em `src/scan/`, sem saber que existe uma interface.
+ *
+ * A câmera nunca liga sozinha ao abrir a página — exige um clique. Além de ser
+ * o que o usuário espera, evita o diálogo de permissão surgindo do nada e
+ * mantém o aparelho frio enquanto ninguém está lendo nada.
  */
 
 import {
   CameraError,
-  CameraErrorCode,
   openCamera,
   setTorch,
   startFrameLoop,
@@ -24,9 +27,17 @@ const COPY_FEEDBACK_MS = 1500;
 const LABEL_COPY = 'Copiar';
 const LABEL_COPIED = 'Copiado!';
 
+const LABEL_START = 'Ligar câmera';
+const LABEL_STOP = 'Parar';
+const LABEL_AGAIN = 'Ler outro';
+
+const PLACEHOLDER_IDLE = 'A câmera só liga quando você pedir';
+const PLACEHOLDER_DONE = 'Câmera desligada';
+
 const SUCCESS_VIBRATION_MS = 40;
 
 const STATUS = {
+  idle: 'Nada é enviado para fora do aparelho.',
   starting: 'Ligando a câmera…',
   searching: 'Aponte para o QR Code.',
   located: 'QR Code encontrado — ampliando para ler…',
@@ -47,7 +58,7 @@ const CORNER_FRACTION = 0.22; // comprimento do "cantinho" em relação ao lado
  */
 export function initScanner() {
   const elements = queryElements();
-  if (!elements) return; // página sem a seção do leitor
+  if (!elements) return; // página sem o leitor
 
   const pipeline = createQrPipeline();
   const session = { stream: null, track: null, stopLoop: null };
@@ -55,46 +66,34 @@ export function initScanner() {
   bindEvents(elements, pipeline, session);
 }
 
-/** Localiza os elementos do leitor; devolve `null` se a seção não existir. */
+/** Localiza os elementos do leitor; devolve `null` se a página não os tiver. */
 function queryElements() {
   const byId = (id) => document.getElementById(id);
 
-  const panel = byId('scanner');
-  const openButton = byId('scanOpen');
-  if (!panel || !openButton) return null;
+  const toggleButton = byId('scanToggle');
+  const stage = byId('scanStage');
+  if (!toggleButton || !stage) return null;
 
   return {
-    panel,
-    openButton,
-    closeButton: byId('scanClose'),
-    stage: byId('scanStage'),
+    toggleButton,
+    stage,
     video: byId('scanVideo'),
     overlay: byId('scanOverlay'),
+    placeholderText: byId('scanPlaceholderText'),
     status: byId('scanStatus'),
     torchButton: byId('scanTorch'),
     result: byId('scanResult'),
     text: byId('scanText'),
     copyButton: byId('scanCopy'),
-    againButton: byId('scanAgain'),
     cropBox: byId('scanCropBox'),
     crop: byId('scanCrop'),
   };
 }
 
 function bindEvents(elements, pipeline, session) {
-  const open = () => start(elements, pipeline, session);
-  const close = () => stop(elements, session);
-
-  elements.openButton.addEventListener('click', open);
-  elements.closeButton.addEventListener('click', close);
-  elements.againButton.addEventListener('click', open);
-
-  elements.panel.addEventListener('click', (event) => {
-    if (event.target === elements.panel) close(); // clique no fundo escuro
-  });
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !elements.panel.hidden) close();
+  elements.toggleButton.addEventListener('click', () => {
+    if (session.stream) stop(elements, session);
+    else start(elements, pipeline, session);
   });
 
   elements.copyButton.addEventListener('click', () => copyResult(elements));
@@ -105,14 +104,18 @@ function bindEvents(elements, pipeline, session) {
       elements.torchButton.setAttribute('aria-pressed', String(on));
     }
   });
+
+  // Sair da página (ou trocar de aba por muito tempo) sem soltar a câmera
+  // deixaria a luzinha acesa e o aparelho esquentando.
+  window.addEventListener('pagehide', () => stop(elements, session));
 }
 
-/** Abre o painel, liga a câmera e começa a analisar os quadros. */
+/** Liga a câmera e começa a analisar os quadros. */
 async function start(elements, pipeline, session) {
-  showPanel(elements);
   hideResult(elements);
   pipeline.reset();
   setStatus(elements, STATUS.starting);
+  elements.toggleButton.disabled = true;
 
   try {
     const { stream, track } = await openCamera(elements.video);
@@ -120,18 +123,19 @@ async function start(elements, pipeline, session) {
     session.track = track;
   } catch (error) {
     setStatus(elements, error instanceof CameraError ? error.message : String(error));
-    if (error?.code === CameraErrorCode.PERMISSION_DENIED) {
-      elements.openButton.focus();
-    }
+    elements.toggleButton.disabled = false;
     return;
   }
 
   // Faz a moldura ter a mesma proporção do vídeo: assim o canvas de destaque
   // cobre exatamente a área da imagem, e as coordenadas do pipeline batem 1:1.
   elements.stage.style.aspectRatio = `${elements.video.videoWidth} / ${elements.video.videoHeight}`;
+  elements.stage.classList.add('is-live');
 
   elements.torchButton.hidden = !supportsTorch(session.track);
   elements.torchButton.setAttribute('aria-pressed', 'false');
+  elements.toggleButton.disabled = false;
+  elements.toggleButton.textContent = LABEL_STOP;
   setStatus(elements, STATUS.searching);
 
   session.stopLoop = startFrameLoop(
@@ -148,24 +152,17 @@ async function start(elements, pipeline, session) {
   );
 }
 
-/** Fecha o painel e libera a câmera. */
+/** Desliga a câmera e volta a moldura ao estado inicial. */
 function stop(elements, session) {
-  session.stopLoop?.();
-  session.stopLoop = null;
-
-  stopStream(session.stream);
-  session.stream = null;
-  session.track = null;
-
-  elements.video.srcObject = null;
-  hidePanel(elements);
-  elements.openButton.focus();
+  releaseCamera(elements, session);
+  elements.toggleButton.textContent = LABEL_START;
+  elements.placeholderText.textContent = PLACEHOLDER_IDLE;
+  setStatus(elements, STATUS.idle);
 }
 
-/** Interrompe a análise mantendo o painel aberto com o resultado. */
+/** Encerra a leitura mantendo o resultado na tela. */
 function finish(elements, session, result) {
-  session.stopLoop?.();
-  session.stopLoop = null;
+  releaseCamera(elements, session);
 
   setStatus(
     elements,
@@ -175,8 +172,28 @@ function finish(elements, session, result) {
   elements.text.value = result.text;
   elements.result.hidden = false;
   elements.copyButton.textContent = LABEL_COPY;
+  elements.toggleButton.textContent = LABEL_AGAIN;
+  elements.placeholderText.textContent = PLACEHOLDER_DONE;
 
   navigator.vibrate?.(SUCCESS_VIBRATION_MS);
+}
+
+/** Para o laço, solta o stream e devolve a moldura ao estado sem vídeo. */
+function releaseCamera(elements, session) {
+  session.stopLoop?.();
+  session.stopLoop = null;
+
+  stopStream(session.stream);
+  session.stream = null;
+  session.track = null;
+
+  elements.video.srcObject = null;
+  elements.stage.classList.remove('is-live');
+  elements.torchButton.hidden = true;
+
+  // Sem vídeo por baixo, o destaque da última detecção viraria um contorno
+  // solto no vazio — e ainda por cima do texto da moldura.
+  clearHighlight(elements.overlay);
 }
 
 /** Reflete o resultado de um quadro na tela (status, destaque e recorte). */
@@ -264,22 +281,16 @@ function copyResult(elements) {
   });
 }
 
-function showPanel(elements) {
-  elements.panel.hidden = false;
-  elements.panel.setAttribute('aria-hidden', 'false');
-  elements.closeButton.focus();
-}
-
-function hidePanel(elements) {
-  elements.panel.hidden = true;
-  elements.panel.setAttribute('aria-hidden', 'true');
+/** Apaga o destaque desenhado sobre o vídeo. */
+function clearHighlight(canvas) {
+  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
 }
 
 function hideResult(elements) {
   elements.result.hidden = true;
   elements.cropBox.hidden = true;
   elements.text.value = '';
-  drawHighlight(elements.overlay, { width: 1, height: 1 }, null);
+  clearHighlight(elements.overlay);
 }
 
 function setStatus(elements, message) {

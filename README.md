@@ -1,8 +1,19 @@
-# Gerador de QR Code PIX
+# QR Code PIX
 
-Página estática, sem build, para gerar QR Code PIX (BR Code estático) com valor
-customizado ou valor livre. Todo o processamento roda no navegador — nenhum dado
-sai do cliente.
+Site estático, sem build, para **gerar** QR Code PIX (BR Code estático) e
+**ler** um código já existente com a câmera. Todo o processamento roda no
+navegador — nenhum dado sai do cliente.
+
+São três páginas:
+
+| Página       | O que faz                                                       |
+|--------------|-----------------------------------------------------------------|
+| `index.html` | escolha entre gerar e ler                                       |
+| `gerar.html` | formulário, BR Code, copia-e-cola e download da imagem          |
+| `ler.html`   | leitor com câmera ao vivo                                       |
+
+Cada uma carrega só o seu ponto de entrada: o gerador não baixa o pipeline de
+visão computacional, e o leitor não baixa a montagem do BR Code.
 
 ## Recursos
 
@@ -19,7 +30,9 @@ O código é organizado em módulos ES nativos (sem bundler), separados por
 responsabilidade:
 
 ```
-index.html              # markup semântico + <form>, sem lógica embutida
+index.html              # página de escolha (só markup e CSS)
+gerar.html              # markup semântico + <form>, sem lógica embutida
+ler.html                # markup do leitor
 assets/
   styles.css            # estilos (extraídos do HTML)
 src/
@@ -44,8 +57,9 @@ src/
   ui/
     form.js             #   leitura e validação do formulário
     app.js              #   controlador: liga eventos e orquestra o fluxo
-    scanner.js          #   controlador da interface do leitor
-  main.js               # ponto de entrada
+    scanner.js          #   controlador da página do leitor
+  main.js               # ponto de entrada do gerador
+  main-scanner.js       # ponto de entrada do leitor
 tests/
   domain.test.js        # testes de regressão do domínio (node --test)
   scan.test.js          # testes do pipeline de leitura (símbolos sintéticos)
@@ -109,6 +123,9 @@ A decodificação em si usa `BarcodeDetector` (API nativa) quando disponível e 
 para o `jsQR`, carregado sob demanda por `import()` dinâmico, no Firefox e em
 Safari antigos. Nenhuma imagem sai do dispositivo.
 
+A câmera nunca liga sozinha ao abrir a página — exige um clique, e é solta
+assim que a leitura termina ou a página é abandonada.
+
 > A câmera exige **contexto seguro**: HTTPS ou `localhost`. Em `http://` de rede
 > local o navegador nem oferece a permissão.
 
@@ -128,6 +145,8 @@ python3 -m http.server 8080
 ```
 
 Depois acesse `http://localhost:8080` (ajuste a porta conforme a ferramenta).
+O leitor precisa de `localhost` ou HTTPS para a câmera funcionar — servir por IP
+de rede local (`http://192.168.x.x`) não basta.
 
 ## Testes
 
@@ -151,7 +170,7 @@ reproduzem exatamente o que foi desenhado.
 
 O deploy é automatizado por GitHub Actions
 (`.github/workflows/deploy-pages.yml`): a cada push na `main`, o workflow roda
-os testes e, **só se eles passarem**, publica o site no GitHub Pages. Como o
+os testes e, **só se eles passarem**, publica as três páginas no GitHub Pages. Como o
 Pages serve por HTTP, os módulos ES carregam normalmente.
 
 Configuração única (uma vez): em **Settings → Pages**, defina
