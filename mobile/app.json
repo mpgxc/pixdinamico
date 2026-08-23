@@ -4,7 +4,6 @@
     "slug": "qr-autozoom",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
@@ -15,7 +14,6 @@
     },
     "android": {
       "package": "com.mpgxc.qrautozoom",
-      "edgeToEdgeEnabled": true,
       "permissions": [
         "android.permission.CAMERA"
       ]

@@ -110,6 +110,48 @@ npm run android          # ou: npm run ios
 
 Depois do primeiro build, `npm start` já basta.
 
+## Build do APK
+
+O projeto nativo (`android/`, `ios/`) **não é versionado** — quem o produz é o
+`expo prebuild`, a partir de `app.json` e das dependências. Isso significa que o
+que a esteira constrói é exatamente o que o repositório descreve, sem projeto
+nativo ajustado à mão que ninguém consegue reproduzir.
+
+O workflow `.github/workflows/apk.yml` (na raiz do repo) roda testes, gera o
+projeto nativo, constrói o APK e o publica como artefato. Dispara de dois jeitos:
+
+- **manualmente**, pela aba Actions, com escolha entre `release` e `debug`;
+- **por tag** `v*`, que além do artefato cria a Release e anexa o APK.
+
+Localmente:
+
+```bash
+npx expo prebuild --platform android
+cd android && ./gradlew assembleRelease
+# saída: android/app/build/outputs/apk/release/app-release.apk
+```
+
+### Assinatura
+
+Sem segredos configurados, o template do React Native assina o release **com a
+chave de debug**. O APK instala e roda — serve para testar e distribuir
+internamente —, mas não serve para publicação em loja. O workflow declara isso
+no nome do artefato e no resumo da execução, em vez de deixar a descoberta para
+depois.
+
+Para assinar de verdade, defina quatro segredos no repositório:
+
+| Segredo | Conteúdo |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | a keystore em base64 (`base64 -w0 release.jks`) |
+| `ANDROID_KEYSTORE_PASSWORD` | senha da keystore |
+| `ANDROID_KEY_ALIAS` | alias da chave |
+| `ANDROID_KEY_PASSWORD` | senha da chave |
+
+Com eles presentes, a assinatura entra pela API de *injected signing* do Android
+Gradle Plugin — sem editar o `build.gradle` que o prebuild acabou de gerar, que
+seria justamente o tipo de remendo que quebra em silêncio na próxima geração.
+
 ## Testes
 
 ```bash
