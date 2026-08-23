@@ -1,0 +1,42 @@
+name: App mobile
+
+# O app não é publicado pelo Pages, então tem gate próprio — e este roda também
+# em pull request, ao contrário do deploy: os testes do pipeline de visão e a
+# checagem de worklets só valem se rodarem antes do merge.
+on:
+  push:
+    branches: [main]
+    paths: ['mobile/**', '.github/workflows/mobile.yml']
+  pull_request:
+    paths: ['mobile/**', '.github/workflows/mobile.yml']
+
+defaults:
+  run:
+    working-directory: mobile
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - run: npm ci
+
+      # Roda os testes do pipeline de visão e confirma que toda função marcada
+      # com 'worklet' é de fato transformada pelo Babel — sem isso o app compila
+      # e quebra no primeiro quadro da câmera.
+      - name: Testes e checagem de worklets
+        run: npm test
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Empacotar pelo Metro prova que os imports resolvem e que o plugin de
+      # worklets roda no caminho real de build, e não só na checagem acima.
+      - name: Empacotar (Metro)
+        run: npx expo export --platform android --output-dir /tmp/export
