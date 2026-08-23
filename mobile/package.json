@@ -1,0 +1,32 @@
+{
+  "name": "qr-autozoom",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start --dev-client",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "prebuild": "expo prebuild --clean",
+    "test": "node --test src/scan/*.test.ts && node scripts/check-worklets.mjs",
+    "typecheck": "tsc --noEmit",
+    "check:worklets": "node scripts/check-worklets.mjs"
+  },
+  "dependencies": {
+    "expo": "~57.0.15",
+    "react": "19.2.3",
+    "react-native": "0.86.2",
+    "react-native-nitro-image": "^0.15.2",
+    "react-native-nitro-modules": "^0.37.0",
+    "react-native-reanimated": "~4.5.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-vision-camera": "^5.2.3",
+    "react-native-worklets": "~0.10.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@types/react": "~19.2.0",
+    "babel-preset-expo": "^57.0.7",
+    "typescript": "~5.9.2"
+  }
+}

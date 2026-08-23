@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "QR AutoZoom",
+    "slug": "qr-autozoom",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mpgxc.qrautozoom",
+      "infoPlist": {
+        "NSCameraUsageDescription": "O leitor precisa da câmera para encontrar e aproximar o QR Code. Nenhuma imagem sai do aparelho."
+      }
+    },
+    "android": {
+      "package": "com.mpgxc.qrautozoom",
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
+    }
+  }
+}

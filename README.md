@@ -4,7 +4,10 @@ Site estático, sem build, para **gerar** QR Code PIX (BR Code estático) e
 **ler** um código já existente com a câmera. Todo o processamento roda no
 navegador — nenhum dado sai do cliente.
 
-São três páginas:
+Há também um **app React Native** com leitor de câmera e aproximação automática
+em `mobile/` — projeto separado, com seu próprio README, testes e CI.
+
+O site tem três páginas:
 
 | Página       | O que faz                                                       |
 |--------------|-----------------------------------------------------------------|
@@ -65,6 +68,7 @@ tests/
   domain.test.js        # testes de regressão do domínio (node --test)
   scan.test.js          # testes do pipeline de leitura (símbolos sintéticos)
   zoom.test.js          # testes da política de aproximação automática
+mobile/                 # app React Native (Expo) — ver mobile/README.md
 ```
 
 Princípios aplicados: separação de responsabilidades (domínio puro isolado do
