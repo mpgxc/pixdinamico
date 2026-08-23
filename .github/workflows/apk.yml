@@ -12,6 +12,13 @@ on:
         type: choice
         default: release
         options: [release, debug]
+      architectures:
+        description: 'Arquiteturas nativas'
+        type: choice
+        default: arm64-v8a,armeabi-v7a
+        options:
+          - arm64-v8a,armeabi-v7a
+          - armeabi-v7a,arm64-v8a,x86,x86_64
   push:
     tags: ['v*']
 
@@ -90,6 +97,11 @@ jobs:
         id: build
         env:
           VARIANT: ${{ inputs.variant || 'release' }}
+          # Só as duas arquiteturas ARM por padrão. Incluir x86 e x86_64 dobra o
+          # tamanho do APK, e elas servem apenas a emuladores — que, num app de
+          # câmera, não são onde se testa. Quem precisar delas escolhe na hora
+          # de disparar o workflow.
+          ARCHS: ${{ inputs.architectures || 'arm64-v8a,armeabi-v7a' }}
           SIGNED: ${{ steps.signing.outputs.signed }}
           STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -110,7 +122,8 @@ jobs:
             )
           fi
 
-          ./android/gradlew -p android "$task" --no-daemon "${args[@]}"
+          ./android/gradlew -p android "$task" --no-daemon \
+            "-PreactNativeArchitectures=$ARCHS" "${args[@]}"
 
           apk=$(find android/app/build/outputs/apk -name '*.apk' | head -1)
           echo "apk=$apk" >> "$GITHUB_OUTPUT"
@@ -120,6 +133,7 @@ jobs:
         env:
           APK: ${{ steps.build.outputs.apk }}
           SIGNED: ${{ steps.signing.outputs.signed }}
+          ARCHS: ${{ inputs.architectures || 'arm64-v8a,armeabi-v7a' }}
         run: |
           size=$(du -h "$APK" | cut -f1)
           {
@@ -130,6 +144,7 @@ jobs:
             echo "| Arquivo | \`$(basename "$APK")\` |"
             echo "| Tamanho | $size |"
             echo "| Assinatura | \`$SIGNED\` |"
+            echo "| Arquiteturas | \`$ARCHS\` |"
             if [ "$SIGNED" = "debug" ]; then
               echo
               echo '> Assinado com a chave de debug: instala e roda, mas **não** serve para publicação.'

@@ -127,9 +127,20 @@ Localmente:
 
 ```bash
 npx expo prebuild --platform android
-cd android && ./gradlew assembleRelease
+cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
 # saída: android/app/build/outputs/apk/release/app-release.apk
 ```
+
+### Arquiteturas
+
+O padrão são as duas arquiteturas ARM. Incluir `x86` e `x86_64` praticamente
+dobra o APK — de 57MB para 109MB — e elas só servem a emuladores, que não são
+onde se testa um app de câmera. Quem precisar delas escolhe na hora de disparar
+o workflow.
+
+O peso vem quase todo do código nativo: `libreactnative.so` e `libVisionCamera.so`
+sozinhas passam de 12MB **por arquitetura**. O bundle JS, comparado a isso, são
+2,1MB de bytecode Hermes.
 
 ### Assinatura
 
